@@ -1,0 +1,79 @@
+require('dotenv').config();
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+const twilio = require('twilio');
+
+const app = express();
+app.use(cors());
+app.use(bodyParser.json());
+
+// In-memory logs for demo (replace with DB for production)
+let logs = [];
+
+// Test endpoint
+app.get('/', (req, res) => {
+  res.send('Dialer backend is running!');
+});
+
+// Outbound call endpoint
+app.post('/call', async (req, res) => {
+  const { phone, agent } = req.body;
+  const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+
+  try {
+    const call = await client.calls.create({
+      to: phone,
+      from: process.env.TWILIO_NUMBER,
+      // Simple TwiML: say a message, or use a TwiML Bin URL for advanced flows
+      twiml: `<Response><Say>Hello from your Bitrix dialer! This is a test call for ${agent}.</Say></Response>`
+    });
+
+    // Log the call
+    logs.push({
+      type: 'call',
+      to: phone,
+      agent,
+      sid: call.sid,
+      time: new Date().toISOString()
+    });
+
+    res.json({ status: 'success', sid: call.sid });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Outbound SMS endpoint
+app.post('/sms/send', async (req, res) => {
+  const { phone, message, agent } = req.body;
+  const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
+
+  try {
+    const sms = await client.messages.create({
+      to: phone,
+      from: process.env.TWILIO_NUMBER,
+      body: message
+    });
+
+    // Log the SMS
+    logs.push({
+      type: 'sms',
+      to: phone,
+      agent,
+      message,
+      sid: sms.sid,
+      time: new Date().toISOString()
+    });
+
+    res.json({ status: 'success', sid: sms.sid });
+  } catch (err) {
+    res.status(500).json({ status: 'error', message: err.message });
+  }
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+  console.log(`Server started on port ${PORT}`);
+});
