@@ -72,6 +72,26 @@ app.post('/sms/send', async (req, res) => {
   }
 });
 
+// Inbound SMS webhook endpoint
+app.post('/sms/receive', (req, res) => {
+  const { From, Body, To } = req.body;
+
+  logs.push({
+    type: 'inbound_sms',
+    from: From,
+    to: To,
+    message: Body,
+    time: new Date().toISOString()
+  });
+
+  res.type('text/xml');
+  res.send(`
+    <Response>
+      <Message>Thank you for your message! We'll get back to you soon.</Message>
+    </Response>
+  `);
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
