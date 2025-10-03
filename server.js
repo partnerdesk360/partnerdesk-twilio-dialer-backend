@@ -7,6 +7,7 @@ const twilio = require('twilio');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: false })); // <-- This line is critical for Twilio webhooks!
 
 // In-memory logs for demo (replace with DB for production)
 let logs = [];
@@ -25,11 +26,9 @@ app.post('/call', async (req, res) => {
     const call = await client.calls.create({
       to: phone,
       from: process.env.TWILIO_NUMBER,
-      // Simple TwiML: say a message, or use a TwiML Bin URL for advanced flows
       twiml: `<Response><Say>Hello from your Bitrix dialer! This is a test call for ${agent}.</Say></Response>`
     });
 
-    // Log the call
     logs.push({
       type: 'call',
       to: phone,
@@ -56,7 +55,6 @@ app.post('/sms/send', async (req, res) => {
       body: message
     });
 
-    // Log the SMS
     logs.push({
       type: 'sms',
       to: phone,
