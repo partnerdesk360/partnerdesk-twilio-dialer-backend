@@ -140,6 +140,11 @@ app.post('/recording/completed', (req, res) => {
   res.sendStatus(200);
 });
 
+// Logs endpoint for monitoring
+app.get('/logs', (req, res) => {
+  res.json(logs);
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
