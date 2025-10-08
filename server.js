@@ -90,6 +90,25 @@ app.post('/sms/receive', (req, res) => {
   `);
 });
 
+// Inbound voice call webhook endpoint
+app.post('/voice/incoming', (req, res) => {
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  // Forward call to your real phone number (set in .env)
+  twiml.dial(process.env.FORWARD_TO_NUMBER);
+
+  // Log inbound call details
+  logs.push({
+    type: 'inbound_call',
+    from: req.body.From,
+    to: req.body.To,
+    time: new Date().toISOString()
+  });
+
+  res.type('text/xml');
+  res.send(twiml.toString());
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
