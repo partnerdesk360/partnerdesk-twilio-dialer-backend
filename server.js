@@ -7,7 +7,7 @@ const twilio = require('twilio');
 const app = express();
 app.use(cors());
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: false })); // <-- This line is critical for Twilio webhooks!
+app.use(bodyParser.urlencoded({ extended: false })); // <-- Critical for Twilio webhooks!
 
 // In-memory logs for demo (replace with DB for production)
 let logs = [];
@@ -90,20 +90,29 @@ app.post('/sms/receive', (req, res) => {
   `);
 });
 
-// Inbound voice call webhook endpoint
+// Sequential inbound voice call webhook endpoint
 app.post('/voice/incoming', (req, res) => {
+  const numbers = process.env.FORWARD_TO_NUMBER.split(',');
   const twiml = new twilio.twiml.VoiceResponse();
 
-  // Forward call to your real phone number (set in .env)
-  twiml.dial(process.env.FORWARD_TO_NUMBER);
+  // Dial first number, set action to /voice/next to handle fallback
+  twiml.dial({ action: '/voice/next', timeout: 20 }, numbers[0]);
 
-  // Log inbound call details
-  logs.push({
-    type: 'inbound_call',
-    from: req.body.From,
-    to: req.body.To,
-    time: new Date().toISOString()
-  });
+  res.type('text/xml');
+  res.send(twiml.toString());
+});
+
+app.post('/voice/next', (req, res) => {
+  const numbers = process.env.FORWARD_TO_NUMBER.split(',');
+  const callStatus = req.body.DialCallStatus;
+  const twiml = new twilio.twiml.VoiceResponse();
+
+  // If call wasn't answered and second number exists, dial second number
+  if (callStatus !== 'completed' && numbers[1]) {
+    twiml.dial(numbers[1]);
+  } else {
+    twiml.say('Sorry, no one is available to take your call.');
+  }
 
   res.type('text/xml');
   res.send(twiml.toString());
