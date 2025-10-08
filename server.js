@@ -92,14 +92,14 @@ app.post('/sms/receive', (req, res) => {
   `);
 });
 
-// Sequential inbound voice call webhook endpoint with recording enabled
+// Sequential inbound voice call webhook endpoint with 15-second timeout
 app.post('/voice/incoming', (req, res) => {
   const numbers = process.env.FORWARD_TO_NUMBER.split(',');
   const twiml = new twilio.twiml.VoiceResponse();
 
   twiml.dial({
     action: '/voice/next',
-    timeout: 20,
+    timeout: 15,
     record: true,
     recordingStatusCallback: 'https://partnerdesk-twilio-dialer-backend.onrender.com/recording/completed'
   }, numbers[0]);
