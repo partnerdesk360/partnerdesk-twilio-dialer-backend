@@ -118,6 +118,20 @@ app.post('/voice/next', (req, res) => {
   res.send(twiml.toString());
 });
 
+// Call recording completed webhook endpoint
+app.post('/recording/completed', (req, res) => {
+  const { CallSid, RecordingUrl } = req.body;
+
+  logs.push({
+    type: 'call_recording',
+    callSid: CallSid,
+    recordingUrl: RecordingUrl,
+    time: new Date().toISOString()
+  });
+
+  res.sendStatus(200);
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
