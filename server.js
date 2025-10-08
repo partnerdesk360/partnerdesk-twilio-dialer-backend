@@ -17,7 +17,7 @@ app.get('/', (req, res) => {
   res.send('Dialer backend is running!');
 });
 
-// Outbound call endpoint
+// Outbound call endpoint with recording enabled
 app.post('/call', async (req, res) => {
   const { phone, agent } = req.body;
   const client = twilio(process.env.TWILIO_SID, process.env.TWILIO_AUTH);
@@ -26,6 +26,8 @@ app.post('/call', async (req, res) => {
     const call = await client.calls.create({
       to: phone,
       from: process.env.TWILIO_NUMBER,
+      record: true,
+      recordingStatusCallback: 'https://partnerdesk-twilio-dialer-backend.onrender.com/recording/completed',
       twiml: `<Response><Say>Hello from your Bitrix dialer! This is a test call for ${agent}.</Say></Response>`
     });
 
@@ -90,13 +92,17 @@ app.post('/sms/receive', (req, res) => {
   `);
 });
 
-// Sequential inbound voice call webhook endpoint
+// Sequential inbound voice call webhook endpoint with recording enabled
 app.post('/voice/incoming', (req, res) => {
   const numbers = process.env.FORWARD_TO_NUMBER.split(',');
   const twiml = new twilio.twiml.VoiceResponse();
 
-  // Dial first number, set action to /voice/next to handle fallback
-  twiml.dial({ action: '/voice/next', timeout: 20 }, numbers[0]);
+  twiml.dial({
+    action: '/voice/next',
+    timeout: 20,
+    record: true,
+    recordingStatusCallback: 'https://partnerdesk-twilio-dialer-backend.onrender.com/recording/completed'
+  }, numbers[0]);
 
   res.type('text/xml');
   res.send(twiml.toString());
@@ -107,9 +113,11 @@ app.post('/voice/next', (req, res) => {
   const callStatus = req.body.DialCallStatus;
   const twiml = new twilio.twiml.VoiceResponse();
 
-  // If call wasn't answered and second number exists, dial second number
   if (callStatus !== 'completed' && numbers[1]) {
-    twiml.dial(numbers[1]);
+    twiml.dial({
+      record: true,
+      recordingStatusCallback: 'https://partnerdesk-twilio-dialer-backend.onrender.com/recording/completed'
+    }, numbers[1]);
   } else {
     twiml.say('Sorry, no one is available to take your call.');
   }
